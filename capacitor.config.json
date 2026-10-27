@@ -1,0 +1,20 @@
+{
+  "appId": "com.tilt.pinball",
+  "appName": "Tilt Pinball",
+  "webDir": "dist",
+  "backgroundColor": "#0b0f0d",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0b0f0d"
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "backgroundColor": "#0b0f0d",
+      "showSpinner": false
+    }
+  }
+}

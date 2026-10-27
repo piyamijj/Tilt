@@ -1,0 +1,58 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Android SDK kur
+        uses: android-actions/setup-android@v3
+
+      - name: Bağımlılıklar
+        run: npm ci
+
+      - name: Web build
+        run: npm run build
+
+      - name: Capacitor sync
+        run: |
+          if [ ! -d android ]; then npx cap add android; fi
+          npx cap sync android
+
+      - name: Debug APK derle
+        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+
+      - name: APK artifact yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: tilt-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Releases'e yükle
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Tilt APK (build ${{ github.run_number }})
+          files: android/app/build/outputs/apk/debug/app-debug.apk

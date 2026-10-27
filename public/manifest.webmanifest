@@ -1,0 +1,12 @@
+{
+  "name": "Tilt Pinball",
+  "short_name": "Tilt",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0b0f0d",
+  "theme_color": "#0b0f0d",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0f0d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Tilt — Addams Family temalı mobil pinball oyunu." />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <title>Tilt — Addams Pinball</title>
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage">
+        <canvas id="game"></canvas>
+
+        <div id="hud" class="hidden">
+          <div class="hud-left">
+            <div class="hud-label">SKOR</div>
+            <div id="hud-score" class="hud-value">0</div>
+            <div class="hud-sub">REKOR <span id="hud-hi">0</span></div>
+          </div>
+          <div class="hud-mid">
+            <div id="hud-multiball" class="pill hidden">MULTIBALL</div>
+            <div id="hud-save" class="pill ghost hidden">TOP KURTARMA</div>
+          </div>
+          <div class="hud-right">
+            <div class="hud-label">HAK</div>
+            <div id="hud-lives" class="hud-value">3</div>
+            <button id="btn-mute" class="mini-btn" aria-label="Sesi aç/kapat">SES: AÇIK</button>
+          </div>
+        </div>
+
+        <div id="power" class="hidden">
+          <div id="power-fill"></div>
+          <span>YAY</span>
+        </div>
+
+        <button id="btn-plunger" class="hidden" aria-label="Yayı çek ve bırak">YAYI ÇEK</button>
+
+        <div id="toast" class="hidden"></div>
+
+        <div id="menu" class="overlay">
+          <div class="panel">
+            <div class="title-eyebrow">ADDAMS AİLESİ SUNAR</div>
+            <h1 class="title">TILT</h1>
+            <p class="subtitle">Perili konakta 3 toplu pinball gecesi</p>
+            <div id="vip-badge" class="pill vip hidden">VIP SINIRSUZ HAK</div>
+            <button id="btn-play" class="btn primary">OYNA</button>
+            <form id="coupon-form" class="coupon" autocomplete="off">
+              <label for="coupon-input">Kupon / Promo Kodu</label>
+              <div class="coupon-row">
+                <input
+                  id="coupon-input"
+                  name="coupon"
+                  type="text"
+                  maxlength="24"
+                  placeholder="örn. POLAT"
+                  autocapitalize="characters"
+                  spellcheck="false"
+                />
+                <button type="submit" class="btn">GÖNDER</button>
+              </div>
+              <p id="coupon-msg" class="coupon-msg"></p>
+            </form>
+            <div class="howto">
+              <div><span class="keycap">◀</span><span class="keycap">▶</span> sol / sağ palet</div>
+              <div><span class="keycap">BOŞLUK</span> basılı tut, bırak: fırlat</div>
+              <div>Mobilde: alt yarıya dokun, YAY butonunu çek-bırak</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="gameover" class="overlay hidden">
+          <div class="panel">
+            <div class="title-eyebrow">KONAK SESSİZLİĞE GÖMÜLDÜ</div>
+            <h2 class="title small">GAME OVER</h2>
+            <div class="stats">
+              <div><span>SKOR</span><strong id="over-score">0</strong></div>
+              <div><span>REKOR</span><strong id="over-hi">0</strong></div>
+            </div>
+            <button id="btn-retry" class="btn primary">TEKRAR OYNA</button>
+            <button id="btn-menu" class="btn ghost">ANA MENÜ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
