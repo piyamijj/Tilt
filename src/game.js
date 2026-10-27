@@ -154,6 +154,9 @@ export class Game {
     // Fırlatma kulvarı ayırıcısı: ortasında çıkış boşluğu olan iki parça
     add(Bodies.rectangle(G.laneDivX, 210, G.laneDivW, 80, { ...wall, label: 'divider' }));
     add(Bodies.rectangle(G.laneDivX, 525, G.laneDivW, 350, { ...wall, label: 'divider' }));
+    // Kulvar tabanını daralt (28 px; top çapı 22): geri düşen top yana oturamaz
+    add(Bodies.rectangle(417.5, 630, 9, 140, { ...wall, label: 'laneNarrow' }));
+    add(Bodies.rectangle(457, 630, 14, 140, { ...wall, label: 'laneNarrow' }));
     // Yay tabanı
     add(Bodies.rectangle(G.laneBallX, G.laneBaseY, 48, 12, { ...wall, label: 'plungerBase' }));
 
