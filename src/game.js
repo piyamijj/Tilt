@@ -44,7 +44,7 @@ const G = {
   flipLen: 54,
   flipRest: 0.5, // radyan, yataydan aşağı
   flipActive: -0.5,
-  flipSpeed: 0.25, // vuruş hızı (rad/alt-adım): ~40ms'de tam savrulma
+  flipSpeed: 0.38, // vuruş hızı (rad/alt-adım): zayıf vuruş düzeltmesi için 0.25 -> 0.38
   flipReturn: 0.18,
 };
 
@@ -62,7 +62,9 @@ export function flipperDrive(side, angle, pressed) {
   const diff = Math.atan2(Math.sin(target - a), Math.cos(target - a));
   if (Math.abs(diff) < 0.004) return 0;
   const top = pressed ? G.flipSpeed : G.flipReturn;
-  return Math.sign(diff) * top * clamp(Math.abs(diff) / 0.35, 0.12, 1);
+  // Vuruşta yumuşatma sadece hedefe çok yakınken (zayıf vuruş düzeltmesi)
+  const k = pressed ? clamp(Math.abs(diff) / 0.12, 0.35, 1) : clamp(Math.abs(diff) / 0.35, 0.12, 1);
+  return Math.sign(diff) * top * k;
 }
 
 // Pivot ofseti: Matter kısıtı pointB'yi dünya ekseninde alır ve SADECE
@@ -242,9 +244,9 @@ export class Game {
       const body = Bodies.rectangle(pivot.x + dirx * off, pivot.y + diry * off, G.flipLen, 15, {
         angle: rest,
         density: 0.02,
-        friction: 0.08,
+        friction: 0.02,
         frictionAir: 0.01,
-        restitution: 0.15,
+        restitution: 0.45,
         label: side === 'L' ? 'flipperL' : 'flipperR',
         chamfer: { radius: 7 },
       });
@@ -652,7 +654,9 @@ export class Game {
       if (ball.isStatic) continue; // Thing tutuyor
       const v = ball.velocity;
       const sp = Math.hypot(v.x, v.y);
-      if (sp > 34) Body.setVelocity(ball, { x: (v.x / sp) * 34, y: (v.y / sp) * 34 });
+      // Palet bölgesinde tavan düşük: top+palet (37 px) içinden geçmesin
+      const cap = ball.position.y > 640 ? 26 : 34;
+      if (sp > cap) Body.setVelocity(ball, { x: (v.x / sp) * cap, y: (v.y / sp) * cap });
       const p = ball.position;
       if (p.x < -20 || p.x > W + 20 || p.y < -40) {
         Body.setPosition(ball, { x: clamp(p.x, 60, W - 80), y: clamp(p.y, 120, 500) });
@@ -690,6 +694,62 @@ export class Game {
           }
         } else {
           ball.laneT = 0;
+        }
+      }
+    }
+    // Kulvar çıkış yardımı: yükselen top çıkış boşluğundayken sola yönlendir (geri düşmesin)
+    if (this.state === 'flight' || this.state === 'play') {
+      for (const ball of this.balls) {
+        if (ball.isStatic) continue;
+        const p = ball.position;
+        if (p.x > 413 && p.x < 464 && p.y > 262 && p.y < 338 && ball.velocity.y < -2 && ball.velocity.x > -3) {
+          Body.setVelocity(ball, { x: -3, y: ball.velocity.y });
+        }
+      }
+    }
+    // Atış sonrası kulvarda geri düşen / duran top: hak kaybettirmeden yeniden fırlatmaya iade
+    if (this.state === 'flight' && now() - this.flightSince > 500) {
+      const ball = this.balls[0];
+      if (ball && !ball.isStatic) {
+        const p = ball.position;
+        const inLane = p.x > 413 && p.x < 464 && p.y > 340;
+        if (inLane && ball.velocity.y > -0.5) {
+          ball.flightStuckT = (ball.flightStuckT || 0) + dtMs;
+          if (ball.flightStuckT > 400) {
+            ball.flightStuckT = 0;
+            Body.setPosition(ball, { x: G.laneBallX, y: G.laneRestY });
+            Body.setVelocity(ball, { x: 0, y: 0 });
+            this.state = 'plunge';
+            this.h.showPlunger(true);
+            this.h.toast('KULVARA DÖNDÜN: TEKRAR FIRLAT');
+          }
+        } else {
+          ball.flightStuckT = 0;
+        }
+      }
+    }
+    // Palet bölgesinde sıkışan top: önce itme, sonra yeniden doğurma
+    if (this.state === 'play' && !this.flippers.L.pressed && !this.flippers.R.pressed) {
+      for (const ball of this.balls) {
+        if (ball.isStatic || this.held === ball) continue;
+        const p = ball.position;
+        const sp = Math.hypot(ball.velocity.x, ball.velocity.y);
+        if (p.x > 20 && p.x < 340 && p.y > 690 && sp < 0.6) {
+          ball.flipStuckT = (ball.flipStuckT || 0) + dtMs;
+          if (ball.flipStuckT > 800 && !ball.flipNudged) {
+            ball.flipNudged = true;
+            Body.setVelocity(ball, { x: p.x < 240 ? 2.5 : -2.5, y: -5 });
+            this._floater(p.x, p.y - 20, 'DÜRTME', '#c9a227');
+          } else if (ball.flipStuckT > 2000) {
+            ball.flipStuckT = 0;
+            ball.flipNudged = false;
+            Body.setPosition(ball, { x: 240, y: 600 });
+            Body.setVelocity(ball, { x: 0, y: 2 });
+            this._floater(240, 580, 'YENİDEN DOĞDU', '#c9a227');
+          }
+        } else {
+          ball.flipStuckT = 0;
+          ball.flipNudged = false;
         }
       }
     }
@@ -1450,12 +1510,12 @@ export class Game {
           this.acc += dt;
           let n = 0;
           const STEP = 1000 / 120;
-          while (this.acc >= STEP && n < 4) {
+          while (this.acc >= STEP && n < 6) {
             this._step(STEP);
             this.acc -= STEP;
             n++;
           }
-          if (n === 4) this.acc = 0;
+          if (n === 6) this.acc = 0;
         }
         this._frame(dt);
       }
