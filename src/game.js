@@ -44,9 +44,34 @@ const G = {
   flipLen: 54,
   flipRest: 0.5, // radyan, yataydan aşağı
   flipActive: -0.5,
-  flipSpeed: 0.75,
-  flipReturn: 0.32,
+  flipSpeed: 0.25, // vuruş hızı (rad/alt-adım): ~40ms'de tam savrulma
+  flipReturn: 0.18,
 };
+
+// ---- Palet sürüş matematiği (saf fonksiyon: test edilebilir) ----
+// Hedefe yaklaştıkça yumuşayan hız + hedefte ölü bant. setAngle ışınlaması
+// YOK: ışınlama pivot kısıtıyla kavga edip paleti titretiyordu (vızıltı).
+export function flipperTarget(side, pressed) {
+  if (side === 'L') return pressed ? G.flipActive : G.flipRest;
+  return pressed ? Math.PI - G.flipActive : Math.PI - G.flipRest;
+}
+
+export function flipperDrive(side, angle, pressed) {
+  const target = flipperTarget(side, pressed);
+  const a = side === 'R' ? (((angle % TAU) + TAU) % TAU) : angle;
+  const diff = Math.atan2(Math.sin(target - a), Math.cos(target - a));
+  if (Math.abs(diff) < 0.004) return 0;
+  const top = pressed ? G.flipSpeed : G.flipReturn;
+  return Math.sign(diff) * top * clamp(Math.abs(diff) / 0.35, 0.12, 1);
+}
+
+// Pivot ofseti: Matter kısıtı pointB'yi dünya ekseninde alır ve SADECE
+// sonradan dönen farkı takip eder. O yüzden ofset, yaratılış açısına göre
+// DÖNDÜRÜLMÜŞ verilmelidir; yoksa palet yanlış noktadan menteşelenir
+// (sağ palet duvara gömülü kalmıştı).
+export function flipperPinOffset(off, restAngle) {
+  return { x: -off * Math.cos(restAngle), y: -off * Math.sin(restAngle) };
+}
 
 export class Game {
   constructor(canvas, hooks) {
@@ -226,7 +251,7 @@ export class Game {
       const pin = Constraint.create({
         pointA: { x: pivot.x, y: pivot.y },
         bodyB: body,
-        pointB: { x: -off, y: 0 },
+        pointB: flipperPinOffset(off, rest),
         stiffness: 1,
         length: 0,
       });
@@ -693,42 +718,7 @@ export class Game {
 
   _driveFlipper(side) {
     const f = this.flippers[side];
-    const body = f.body;
-    if (side === 'L') {
-      const a = body.angle;
-      if (f.pressed) {
-        if (a > G.flipActive + 0.02) Body.setAngularVelocity(body, -G.flipSpeed);
-        else {
-          Body.setAngle(body, G.flipActive);
-          Body.setAngularVelocity(body, 0);
-        }
-      } else if (a < G.flipRest - 0.02) {
-        Body.setAngularVelocity(body, G.flipReturn);
-      } else if (a > G.flipRest + 0.02) {
-        Body.setAngle(body, G.flipRest);
-        Body.setAngularVelocity(body, 0);
-      } else {
-        Body.setAngularVelocity(body, body.angularVelocity * 0.8);
-      }
-    } else {
-      const a = (((body.angle % TAU) + TAU) % TAU);
-      const rest = Math.PI - G.flipRest;
-      const active = Math.PI - G.flipActive;
-      if (f.pressed) {
-        if (a < active - 0.02) Body.setAngularVelocity(body, G.flipSpeed);
-        else {
-          Body.setAngle(body, active);
-          Body.setAngularVelocity(body, 0);
-        }
-      } else if (a > rest + 0.02) {
-        Body.setAngularVelocity(body, -G.flipReturn);
-      } else if (a < rest - 0.02) {
-        Body.setAngle(body, rest);
-        Body.setAngularVelocity(body, 0);
-      } else {
-        Body.setAngularVelocity(body, body.angularVelocity * 0.8);
-      }
-    }
+    Body.setAngularVelocity(f.body, flipperDrive(side, f.body.angle, f.pressed));
   }
 
   _applyMagnet() {
